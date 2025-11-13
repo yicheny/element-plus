@@ -19,6 +19,11 @@ export function useFilter(props: TreeProps, tree: Ref<Tree | undefined>) {
     if (!filterable.value) {
       return
     }
+    if (!query) {
+      hiddenNodeKeySet.value.clear()
+      hiddenExpandIconKeySet.value.clear()
+      return
+    }
     const expandKeySet = new Set<TreeKey>()
     const hiddenExpandIconKeys = hiddenExpandIconKeySet.value
     const hiddenKeys = hiddenNodeKeySet.value
@@ -26,16 +31,15 @@ export function useFilter(props: TreeProps, tree: Ref<Tree | undefined>) {
     const nodes = tree.value?.treeNodes || []
     const filter = props.filterMethod
     hiddenKeys.clear()
+    hiddenExpandIconKeys.clear()
     function traverse(nodes: TreeNode[]) {
       nodes.forEach((node) => {
         family.push(node)
         if (filter?.(query, node.data, node)) {
           family.forEach((member) => {
             expandKeySet.add(member.key)
-            member.expanded = true
           })
         } else {
-          node.expanded = false
           if (node.isLeaf) {
             hiddenKeys.add(node.key)
           }
