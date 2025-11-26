@@ -206,6 +206,96 @@ describe('<fixed-size-grid />', () => {
       expect(wrapper.findAll(ITEM_SELECTOR)).toHaveLength(42)
     })
 
+    const overrideSize = (
+      el: HTMLElement,
+      key: 'clientHeight' | 'offsetHeight'
+    ) => {
+      const descriptor = Object.getOwnPropertyDescriptor(el, key)
+      return (value: number) => {
+        Object.defineProperty(el, key, {
+          configurable: true,
+          get: () => value,
+        })
+        return () => {
+          if (descriptor) {
+            Object.defineProperty(el, key, descriptor)
+          } else {
+            delete (el as any)[key]
+          }
+        }
+      }
+    }
+
+    const setClientHeight = (el: HTMLElement, value: number) =>
+      overrideSize(el, 'clientHeight')(value)
+    const setOffsetHeight = (el: HTMLElement, value: number) =>
+      overrideSize(el, 'offsetHeight')(value)
+
+    it('should keep row flush with bottom when using END alignment', async () => {
+      const wrapper = mount({
+        props: {
+          totalColumn: 4,
+          width: 150,
+        },
+      })
+
+      await nextTick()
+
+      const gridRef = wrapper.vm.$refs.gridRef as GridRef
+      const windowEl = unref(gridRef.windowRef)
+      expect(windowEl).toBeDefined()
+      const restoreClientHeight = setClientHeight(windowEl!, 100)
+      const restoreOffsetHeight = setOffsetHeight(windowEl!, 100)
+
+      try {
+        const targetRow = 5
+
+        gridRef.scrollToItem(targetRow, 0, END_ALIGNMENT)
+        await nextTick()
+
+        const rowHeight = 25
+        const height = 100
+        expect(gridRef.states.scrollTop).toBe(
+          (targetRow + 1) * rowHeight - height
+        )
+      } finally {
+        restoreClientHeight()
+        restoreOffsetHeight()
+      }
+    })
+
+    it('should reserve space when native scrollbar takes layout room', async () => {
+      const wrapper = mount({
+        props: {
+          totalColumn: 4,
+          width: 150,
+        },
+      })
+
+      await nextTick()
+
+      const gridRef = wrapper.vm.$refs.gridRef as GridRef
+      const windowEl = unref(gridRef.windowRef)
+      expect(windowEl).toBeDefined()
+      const restoreClientHeight = setClientHeight(windowEl!, 100)
+      const restoreOffsetHeight = setOffsetHeight(windowEl!, 120)
+
+      try {
+        const targetRow = 5
+        gridRef.scrollToItem(targetRow, 0, END_ALIGNMENT)
+        await nextTick()
+
+        const rowHeight = 25
+        const height = 100
+        expect(gridRef.states.scrollTop).toBe(
+          (targetRow + 1) * rowHeight - height + 20
+        )
+      } finally {
+        restoreClientHeight()
+        restoreOffsetHeight()
+      }
+    })
+
     it('should handle touchstart touchmove correctly', async () => {
       vi.useFakeTimers()
       const wrapper = mount()

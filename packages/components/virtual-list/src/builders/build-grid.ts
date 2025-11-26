@@ -12,13 +12,7 @@ import {
   unref,
 } from 'vue'
 import { useEventListener } from '@vueuse/core'
-import {
-  getScrollBarWidth,
-  hasOwn,
-  isClient,
-  isNumber,
-  isString,
-} from '@element-plus/utils'
+import { hasOwn, isClient, isNumber, isString } from '@element-plus/utils'
 import { useNamespace } from '@element-plus/hooks'
 import Scrollbar from '../components/scrollbar'
 import { useGridWheel } from '../hooks/use-grid-wheel'
@@ -409,6 +403,28 @@ const createGrid = ({
           parsedHeight
         )
 
+      const getCrossScrollBarSize = () => {
+        const windowElement = unref(windowRef)
+
+        if (!windowElement) {
+          return {
+            horizontal: 0,
+            vertical: 0,
+          }
+        }
+
+        return {
+          horizontal: Math.max(
+            0,
+            windowElement.offsetHeight - windowElement.clientHeight
+          ),
+          vertical: Math.max(
+            0,
+            windowElement.offsetWidth - windowElement.clientWidth
+          ),
+        }
+      }
+
       const scrollToItem = (
         rowIndex = 0,
         columnIdx = 0,
@@ -417,7 +433,10 @@ const createGrid = ({
         const _states = unref(states)
         columnIdx = Math.max(0, Math.min(columnIdx, props.totalColumn! - 1))
         rowIndex = Math.max(0, Math.min(rowIndex, props.totalRow! - 1))
-        const scrollBarWidth = getScrollBarWidth(ns.namespace.value)
+        const {
+          horizontal: horizontalScrollbarSize,
+          vertical: verticalScrollbarSize,
+        } = getCrossScrollBarSize()
 
         const _cache = unref(cache)
         const estimatedHeight = getEstimatedTotalHeight(props, _cache)
@@ -430,7 +449,9 @@ const createGrid = ({
             alignment,
             _states.scrollLeft,
             _cache,
-            estimatedWidth > (props.width as number) ? scrollBarWidth : 0
+            estimatedHeight > (props.height as number)
+              ? verticalScrollbarSize
+              : 0
           ),
           scrollTop: getRowOffset(
             props,
@@ -438,7 +459,9 @@ const createGrid = ({
             alignment,
             _states.scrollTop,
             _cache,
-            estimatedHeight > (props.height as number) ? scrollBarWidth : 0
+            estimatedWidth > (props.width as number)
+              ? horizontalScrollbarSize
+              : 0
           ),
         })
       }
